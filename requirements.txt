@@ -1,0 +1,10 @@
+Flask
+Flask-CORS
+opencv-python
+moviepy
+google-generativeai
+pandas
+openpyxl
+tqdm
+Pillow
+python-dotenv

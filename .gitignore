@@ -1,0 +1,13 @@
+/venv
+.env
+__pycache__/
+
+uploads/
+output/
+clips/
+frames/
+
+# media
+*.mp4
+*.avi
+*.mov

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HylightX – AI Video Highlight Maker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            color: #e5e5e5;
+        }
+
+        /* Modern gradient accent */
+        .gradient-text {
+            background: linear-gradient(135deg, #a855f7, #3b82f6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .navbar {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .hero-card {
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(16px);
+            border-radius: 2rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(59,130,246,0.15));
+            padding: 2rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .card-header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-header p {
+            color: #9ca3af;
+            font-size: 1rem;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #e5e5e5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-label i {
+            color: #a855f7;
+        }
+
+        textarea.form-control {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 1rem;
+            color: #f0f0f0;
+            padding: 0.9rem 1.2rem;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        textarea.form-control:focus {
+            background: #252525;
+            border-color: #a855f7;
+            box-shadow: 0 0 0 3px rgba(168,85,247,0.2);
+            color: white;
+        }
+
+        .upload-area {
+            background: #131313;
+            border: 2px dashed #2c2c2c;
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upload-area:hover {
+            border-color: #a855f7;
+            background: #1a1a1a;
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #3b82f6;
+            background: #1e1e2a;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #a855f7;
+            margin-bottom: 1rem;
+        }
+
+        .file-info {
+            background: #1e1e1e;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+            border-left: 4px solid #a855f7;
+        }
+
+        .file-info.show {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn-process {
+            background: linear-gradient(135deg, #a855f7, #3b82f6);
+            border: none;
+            padding: 0.9rem 2rem;
+            border-radius: 2rem;
+            font-weight: 700;
+            font-size: 1rem;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-process:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(168,85,247,0.4);
+        }
+
+        .btn-process:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .processing-status {
+            background: #131313;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            text-align: center;
+            display: none;
+        }
+
+        .processing-status.show {
+            display: block;
+        }
+
+        .spinner-custom {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #2c2c2c;
+            border-top: 4px solid #a855f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .progress-custom {
+            height: 8px;
+            background: #2c2c2c;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+        }
+
+        .progress-bar-custom {
+            height: 100%;
+            background: linear-gradient(90deg, #a855f7, #3b82f6);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .status-message {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+
+        .alert-error {
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+            color: #f87171;
+        }
+
+        .example-badge {
+            background: #1e1e1e;
+            color: #c084fc;
+            padding: 0.3rem 0.9rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin: 0.3rem;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid #2c2c2c;
+        }
+
+        .example-badge:hover {
+            background: #2c2c2c;
+            color: white;
+            border-color: #a855f7;
+        }
+
+        .feature-list {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #2c2c2c;
+        }
+
+        .feature-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .feature-item i {
+            font-size: 1.8rem;
+            color: #a855f7;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-item p {
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 0 1rem; }
+            .card-body { padding: 1.5rem; }
+            .feature-list { flex-direction: column; gap: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="container-fluid d-flex justify-content-center">
+        <a class="navbar-brand text-white" href="/">
+            <i class="fas fa-magic me-2" style="color: #a855f7;"></i> Hylight<span class="gradient-text">X</span>
+        </a>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="hero-card">
+        <div class="card-header">
+            <h1>AI Video Highlight <span class="gradient-text">Maker</span></h1>
+            <p>Describe what you want – we’ll extract the best moments automatically</p>
+        </div>
+
+        <div class="card-body">
+            <div id="errorAlert" class="alert-error">
+                <i class="fas fa-exclamation-circle me-2"></i> <span id="errorMessage"></span>
+            </div>
+
+            <div id="uploadForm">
+                <div class="form-group mb-4">
+                    <label class="form-label">
+                        <i class="fas fa-comment-dots"></i> What highlights are you looking for?
+                    </label>
+                    <textarea id="prompt" class="form-control" rows="3" 
+                        placeholder="e.g., Show me all intense fight scenes, dramatic goals, or emotional reactions..."></textarea>
+                    <div class="example-prompts mt-2">
+                        <span class="example-badge" onclick="setExamplePrompt('Show me all fight sequences and intense combat')">⚔️ Combat</span>
+                        <span class="example-badge" onclick="setExamplePrompt('Show me goals and celebrations')">⚽ Goals</span>
+                        <span class="example-badge" onclick="setExamplePrompt('Show me emotional moments and close-ups')">😢 Emotions</span>
+                        <span class="example-badge" onclick="setExamplePrompt('Show me fast action and movement')">🏃 Action</span>
+                    </div>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label class="form-label"><i class="fas fa-video"></i> Upload Video</label>
+                    <div id="dropZone" class="upload-area">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <h5 class="text-white">Drag & drop or click to browse</h5>
+                        <p class="text-secondary small mb-0">MP4, AVI, MOV, MKV, WEBM (Max 500MB)</p>
+                        <input type="file" id="videoFile" accept="video/*" style="display: none;">
+                    </div>
+                    <div id="fileInfo" class="file-info">
+                        <i class="fas fa-check-circle" style="color: #a855f7;"></i>
+                        <span><strong id="fileName"></strong> <span id="fileSize" class="text-secondary"></span></span>
+                    </div>
+                </div>
+
+                <button id="processBtn" class="btn-process" onclick="processVideo()" disabled>
+                    <i class="fas fa-rocket me-2"></i> Extract Highlights
+                </button>
+            </div>
+
+            <div id="processingStatus" class="processing-status">
+                <div class="spinner-custom"></div>
+                <h5>Processing your video</h5>
+                <p class="text-secondary">This usually takes 1–3 minutes</p>
+                <div class="progress-custom">
+                    <div id="progressBar" class="progress-bar-custom"></div>
+                </div>
+                <div id="statusMessage" class="status-message">
+                    <i class="fas fa-spinner fa-spin me-1"></i> Initializing...
+                </div>
+            </div>
+
+            <div class="feature-list">
+                <div class="feature-item"><i class="fas fa-brain"></i><p>AI‑powered analysis</p></div>
+                <div class="feature-item"><i class="fas fa-cut"></i><p>Smart trimming</p></div>
+                <div class="feature-item"><i class="fas fa-film"></i><p>Smooth transitions</p></div>
+                <div class="feature-item"><i class="fas fa-download"></i><p>Instant download</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let selectedFile = null;
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('videoFile');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileNameSpan = document.getElementById('fileName');
+    const fileSizeSpan = document.getElementById('fileSize');
+    const processBtn = document.getElementById('processBtn');
+    const uploadFormDiv = document.getElementById('uploadForm');
+    const processingDiv = document.getElementById('processingStatus');
+    const errorAlert = document.getElementById('errorAlert');
+    const errorMsgSpan = document.getElementById('errorMessage');
+    const progressBar = document.getElementById('progressBar');
+    const statusMsgSpan = document.getElementById('statusMessage');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+    function setExamplePrompt(p) { document.getElementById('prompt').value = p; }
+
+    function handleFile(file) {
+        if (!file.type.startsWith('video/')) { showError('Please select a valid video file'); return; }
+        if (file.size > 500 * 1024 * 1024) { showError('File size must be < 500MB'); return; }
+        selectedFile = file;
+        fileNameSpan.textContent = file.name;
+        fileSizeSpan.textContent = `(${(file.size / (1024*1024)).toFixed(2)} MB)`;
+        fileInfo.classList.add('show');
+        dropZone.style.borderColor = '#a855f7';
+        processBtn.disabled = false;
+        hideError();
+    }
+
+    async function processVideo() {
+        if (!selectedFile) { showError('Select a video first'); return; }
+        const prompt = document.getElementById('prompt').value.trim();
+        if (!prompt) { showError('Please describe what highlights you want'); return; }
+
+        const formData = new FormData();
+        formData.append('video', selectedFile);
+        formData.append('prompt', prompt);
+
+        uploadFormDiv.style.display = 'none';
+        processingDiv.classList.add('show');
+        progressBar.style.width = '0%';
+        statusMsgSpan.innerHTML = '<i class="fas fa-upload"></i> Uploading video...';
+
+        try {
+            const response = await fetch('/upload', { method: 'POST', body: formData });
+            const data = await response.json();
+            if (response.ok) {
+                localStorage.setItem(`prompt_${data.job_id}`, prompt);
+                progressBar.style.width = '30%';
+                statusMsgSpan.innerHTML = '<i class="fas fa-cogs"></i> Processing started...';
+                setTimeout(() => { window.location.href = `/result/${data.job_id}`; }, 1000);
+            } else {
+                throw new Error(data.error || 'Upload failed');
+            }
+        } catch (err) {
+            showError(err.message);
+            resetForm();
+        }
+    }
+
+    function showError(msg) { errorMsgSpan.textContent = msg; errorAlert.classList.add('show'); setTimeout(() => errorAlert.classList.remove('show'), 5000); }
+    function hideError() { errorAlert.classList.remove('show'); }
+    function resetForm() {
+        uploadFormDiv.style.display = 'block';
+        processingDiv.classList.remove('show');
+        selectedFile = null;
+        fileInfo.classList.remove('show');
+        dropZone.style.borderColor = '#2c2c2c';
+        processBtn.disabled = true;
+        progressBar.style.width = '0%';
+    }
+    const urlError = new URLSearchParams(window.location.search).get('error');
+    if (urlError) showError(decodeURIComponent(urlError));
+</script>
+</body>
+</html>
