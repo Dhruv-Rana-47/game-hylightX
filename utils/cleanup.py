@@ -29,9 +29,4 @@ class CleanupManager:
 
             os.makedirs(folder, exist_ok=True)
 
-        # Recreate structured output subfolders
-        os.makedirs(os.path.join(Config.OUTPUT_FOLDER, "descriptions"), exist_ok=True)
-        os.makedirs(os.path.join(Config.OUTPUT_FOLDER, "memory"), exist_ok=True)
-        os.makedirs(os.path.join(Config.OUTPUT_FOLDER, "highlights"), exist_ok=True)
-
         print("✅ Cleanup complete. Fresh environment ready.")

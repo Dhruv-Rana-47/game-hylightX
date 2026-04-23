@@ -4,14 +4,8 @@ from config import Config
 
 class PromptEnhancer:
     """
-    Uses a lightweight Gemini text model to refine the user's prompt
-    into a stronger retrieval-oriented internal prompt.
-
-    Design goals:
-    - preserve original intent
-    - expand short or vague prompts for better highlight matching
-    - avoid changing the user's meaning
-    - keep output concise and retrieval-friendly
+    Refines an optional free-text note from the user.
+    Categories remain primary; text is only a refinement layer.
     """
 
     def __init__(self):
@@ -19,70 +13,47 @@ class PromptEnhancer:
         self.model_id = Config.PROMPT_ENHANCER_MODEL
         self.client = genai.Client(api_key=self.api_key)
 
-    def _build_enhancement_prompt(self, user_prompt):
+    def _build_enhancement_prompt(self, user_prompt, selected_categories, video_summary):
+        categories_text = ", ".join(selected_categories) if selected_categories else "none"
+
         return f"""
-You are a prompt enhancement assistant for a gaming highlight extraction system.
+You are refining a user's optional note for a gaming highlight extraction system.
 
-Your task:
-Rewrite the user's prompt into a better internal retrieval prompt for finding highlight moments in a gaming video.
+The system already has selected highlight categories:
+{categories_text}
 
-Important instructions:
-- Preserve the original meaning exactly.
-- Do not change the user's intent.
-- Expand the wording with useful related gameplay/highlight concepts only when they are clearly relevant.
-- Make the rewritten prompt better for semantic matching against frame descriptions and clip summaries.
-- Keep it concise, natural, and retrieval-focused.
-- Do not mention these instructions.
-- Return only the rewritten prompt text.
+Your job:
+Rewrite the user's note into a concise refinement prompt that helps rank matching clips more accurately.
+
+Rules:
+- Preserve the original meaning.
+- Do not replace or contradict the selected categories.
+- Keep it short and retrieval-friendly.
+- Use the video summary as context.
+- Return only the refined text.
 - Do not return JSON.
 - Do not explain anything.
 
-Examples:
-
-User prompt: show clutch moment
-Rewritten prompt: Find highlight-worthy clutch moments involving high-pressure survival, tense enemy engagement, decisive action, and peak gameplay intensity.
-
-User prompt: show best kills
-Rewritten prompt: Find highlight-worthy kill and elimination moments involving visible enemy engagement, weapon fire, decisive combat, and peak-action gameplay.
-
-User prompt: find sniper shot
-Rewritten prompt: Find highlight moments involving sniper gameplay, long-range aiming, precise shots, visible enemy targeting, and high-impact combat.
-
-User prompt: show ability use
-Rewritten prompt: Find highlight-worthy moments involving visible ability usage, tactical effects, special visual effects, and impactful gameplay transitions.
-
-Now rewrite this user prompt:
-
+User note:
 {user_prompt}
+
+Video summary:
+{video_summary if video_summary else "No summary available."}
 """
 
-    def enhance_prompt(self, user_prompt):
-        """
-        Returns a refined retrieval prompt.
-        Falls back to original prompt if enhancement fails.
-        """
+    def enhance_prompt(self, user_prompt, selected_categories, video_summary):
         user_prompt = (user_prompt or "").strip()
         if not user_prompt:
             return ""
 
         try:
-            prompt = self._build_enhancement_prompt(user_prompt)
-
+            prompt = self._build_enhancement_prompt(user_prompt, selected_categories, video_summary)
             response = self.client.models.generate_content(
                 model=self.model_id,
                 contents=prompt
             )
-
             refined_prompt = (response.text or "").strip()
-
-            if not refined_prompt:
-                return user_prompt
-
-            # very basic cleanup
-            refined_prompt = refined_prompt.replace("\n", " ").strip()
-
-            return refined_prompt
-
+            return refined_prompt.replace("\n", " ").strip() if refined_prompt else user_prompt
         except Exception as e:
             print(f"⚠️ Prompt enhancement failed: {e}")
             return user_prompt

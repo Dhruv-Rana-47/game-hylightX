@@ -56,14 +56,8 @@
             gap: 1.5rem;
             padding: 2rem;
         }
-        .video-panel {
-            flex: 2;
-            min-width: 280px;
-        }
-        .info-panel {
-            flex: 1.2;
-            min-width: 260px;
-        }
+        .video-panel { flex: 2; min-width: 280px; }
+        .info-panel { flex: 1.2; min-width: 260px; }
         .video-wrapper {
             background: #000;
             border-radius: 1.2rem;
@@ -94,15 +88,16 @@
         .info-row {
             display: flex;
             justify-content: space-between;
+            gap: 1rem;
             margin-bottom: 0.8rem;
             font-size: 0.9rem;
         }
-        .info-label {
-            color: #9ca3af;
-        }
+        .info-label { color: #9ca3af; min-width: 110px; }
         .info-value {
             font-weight: 500;
             color: #c084fc;
+            text-align: right;
+            word-break: break-word;
         }
         .highlights-scroll {
             max-height: 320px;
@@ -206,7 +201,7 @@
     <div class="result-card">
         <div class="result-header">
             <h1><i class="fas fa-magic me-2" style="color: #a855f7;"></i> Your Highlight Video</h1>
-            <p class="text-secondary mb-0">AI‑powered, ready in seconds</p>
+            <p class="text-secondary mb-0">Category-driven, AI-scored highlights</p>
         </div>
 
         <div id="processingContent" class="processing-overlay">
@@ -218,7 +213,6 @@
 
         <div id="completedContent" style="display: none;">
             <div class="main-grid">
-                <!-- Left: Video player -->
                 <div class="video-panel">
                     <div class="video-wrapper">
                         <video id="highlightVideo" controls>
@@ -231,11 +225,12 @@
                     </div>
                 </div>
 
-                <!-- Right: Info + Timestamps -->
                 <div class="info-panel">
                     <div class="info-card">
                         <h5><i class="fas fa-info-circle me-2"></i> Details</h5>
-                        <div class="info-row"><span class="info-label">Your prompt:</span><span class="info-value" id="promptText">-</span></div>
+                        <div class="info-row"><span class="info-label">Categories:</span><span class="info-value" id="categoriesText">-</span></div>
+                        <div class="info-row"><span class="info-label">Optional note:</span><span class="info-value" id="promptText">-</span></div>
+                        <div class="info-row"><span class="info-label">Refined note:</span><span class="info-value" id="refinedPromptText">-</span></div>
                         <div class="info-row"><span class="info-label">Highlights found:</span><span class="info-value" id="highlightsCount">0</span></div>
                         <div class="info-row"><span class="info-label">Processing time:</span><span class="info-value" id="processingTime">-</span></div>
                     </div>
@@ -253,32 +248,37 @@
 
 <script>
     function getJobIdFromUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        let jobId = urlParams.get('job_id');
-        if (!jobId) {
-            const parts = window.location.pathname.split('/');
-            const idx = parts.indexOf('result');
-            if (idx !== -1 && parts.length > idx+1) jobId = parts[idx+1];
-        }
-        return jobId;
+        const parts = window.location.pathname.split('/');
+        const idx = parts.indexOf('result');
+        if (idx !== -1 && parts.length > idx + 1) return parts[idx + 1];
+        return null;
     }
+
     const jobId = getJobIdFromUrl();
     let pollInterval = null;
 
     document.addEventListener('DOMContentLoaded', () => {
-        if (!jobId) { alert('No job ID. Redirecting...'); window.location.href='/'; return; }
+        if (!jobId) {
+            alert('No job ID. Redirecting...');
+            window.location.href = '/';
+            return;
+        }
+
         startPolling();
-        document.getElementById('downloadBtn')?.addEventListener('click', () => window.location.href=`/download/${jobId}`);
-        document.getElementById('newVideoBtn')?.addEventListener('click', () => window.location.href='/');
+
+        document.getElementById('downloadBtn')?.addEventListener('click', () => window.location.href = `/download/${jobId}`);
+        document.getElementById('newVideoBtn')?.addEventListener('click', () => window.location.href = '/');
     });
 
     function startPolling() {
         let step = 0;
-        const steps = ['Extracting frames', 'AI analysis', 'Matching highlights', 'Rendering video'];
+        const steps = ['Extracting frames', 'Scoring gameplay', 'Selecting highlights', 'Rendering video'];
+
         pollInterval = setInterval(async () => {
             try {
                 const res = await fetch(`/status/${jobId}`);
                 const data = await res.json();
+
                 if (data.status === 'processing') {
                     step = Math.min(step + 0.05, 3.5);
                     const prog = (step / 3.5) * 100;
@@ -290,47 +290,57 @@
                 } else if (data.status === 'failed') {
                     clearInterval(pollInterval);
                     alert('Processing failed: ' + (data.error || 'Unknown error'));
-                    window.location.href='/';
+                    window.location.href = '/';
                 }
-            } catch(e) { console.error(e); }
+            } catch (e) {
+                console.error(e);
+            }
         }, 2500);
     }
 
     async function showResults(data) {
         document.getElementById('processingContent').style.display = 'none';
         document.getElementById('completedContent').style.display = 'block';
+
         const videoSrc = `/preview/${jobId}`;
         document.getElementById('videoSource').src = videoSrc;
         document.getElementById('highlightVideo').load();
 
-        const storedPrompt = localStorage.getItem(`prompt_${jobId}`) || data.prompt || '—';
-        document.getElementById('promptText').innerText = storedPrompt;
+        const storedCategories = JSON.parse(localStorage.getItem(`categories_${jobId}`) || '[]');
+        const storedPrompt = localStorage.getItem(`optional_prompt_${jobId}`) || '';
+
+        document.getElementById('categoriesText').innerText = (data.selected_categories || storedCategories).join(', ') || '—';
+        document.getElementById('promptText').innerText = data.optional_prompt || storedPrompt || '—';
+        document.getElementById('refinedPromptText').innerText = data.refined_prompt || '—';
         document.getElementById('highlightsCount').innerText = data.matches_count || 0;
         document.getElementById('processingTime').innerText = data.processing_time || 'Calculating...';
 
-        // fetch detailed highlights if not already in data
         let highlights = data.highlights || [];
         if (!highlights.length) {
             try {
                 const resp = await fetch(`/api/highlights/${jobId}`);
                 const json = await resp.json();
                 if (json.highlights) highlights = json.highlights;
-            } catch(e) {}
+            } catch (e) {}
         }
+
         displayHighlights(highlights);
     }
 
     function displayHighlights(highlights) {
         const container = document.getElementById('highlightsList');
         if (!container) return;
+
         if (!highlights || highlights.length === 0) {
             container.innerHTML = '<div class="text-secondary text-center py-3">✨ No highlights matched</div>';
             return;
         }
+
         container.innerHTML = '';
         highlights.forEach(h => {
             const ts = typeof h === 'object' ? h.timestamp : h;
             const desc = typeof h === 'object' ? (h.description || 'Highlight') : `Highlight at ${formatTime(ts)}`;
+
             const div = document.createElement('div');
             div.className = 'highlight-item';
             div.onclick = () => seekTo(ts);
@@ -346,12 +356,17 @@
         if (sec === undefined) return '0:00';
         const mins = Math.floor(sec / 60);
         const s = Math.floor(sec % 60);
-        return `${mins}:${s.toString().padStart(2,'0')}`;
+        return `${mins}:${s.toString().padStart(2, '0')}`;
     }
+
     function seekTo(t) {
         const vid = document.getElementById('highlightVideo');
-        if (vid) { vid.currentTime = t; vid.play(); }
+        if (vid) {
+            vid.currentTime = t;
+            vid.play();
+        }
     }
+
     function escapeHtml(str) {
         return str.replace(/[&<>]/g, function(m) {
             if (m === '&') return '&amp;';

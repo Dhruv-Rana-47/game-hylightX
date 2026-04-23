@@ -8,3 +8,6 @@ openpyxl
 tqdm
 Pillow
 python-dotenv
+Flask-SQLAlchemy
+Flask-Login
+Werkzeug

@@ -7,46 +7,35 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: #0a0a0a;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             min-height: 100vh;
             color: #e5e5e5;
         }
-
-        /* Modern gradient accent */
         .gradient-text {
             background: linear-gradient(135deg, #a855f7, #3b82f6);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
         }
-
         .navbar {
             background: rgba(10, 10, 10, 0.8);
             backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(255,255,255,0.08);
             padding: 1rem 0;
         }
-
         .navbar-brand {
             font-size: 1.8rem;
             font-weight: 800;
             letter-spacing: -0.5px;
         }
-
         .container {
             max-width: 1000px;
             margin: 2rem auto;
             padding: 0 1.5rem;
         }
-
         .hero-card {
             background: rgba(20, 20, 20, 0.8);
             backdrop-filter: blur(16px);
@@ -55,29 +44,22 @@
             overflow: hidden;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
         }
-
         .card-header {
             background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(59,130,246,0.15));
             padding: 2rem 2rem;
             text-align: center;
             border-bottom: 1px solid rgba(255,255,255,0.08);
         }
-
         .card-header h1 {
             font-size: 2.2rem;
             font-weight: 800;
             margin-bottom: 0.5rem;
         }
-
         .card-header p {
             color: #9ca3af;
             font-size: 1rem;
         }
-
-        .card-body {
-            padding: 2rem;
-        }
-
+        .card-body { padding: 2rem; }
         .form-label {
             font-weight: 600;
             margin-bottom: 0.75rem;
@@ -86,10 +68,7 @@
             align-items: center;
             gap: 8px;
         }
-
-        .form-label i {
-            color: #a855f7;
-        }
+        .form-label i { color: #a855f7; }
 
         textarea.form-control {
             background: #1e1e1e;
@@ -100,12 +79,42 @@
             font-size: 0.95rem;
             transition: all 0.2s;
         }
-
         textarea.form-control:focus {
             background: #252525;
             border-color: #a855f7;
             box-shadow: 0 0 0 3px rgba(168,85,247,0.2);
             color: white;
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        .cat-card {
+            background: #151515;
+            border: 1px solid #2c2c2c;
+            border-radius: 1rem;
+            padding: 0.9rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .cat-card:hover {
+            border-color: #a855f7;
+            background: #1a1a1a;
+        }
+        .cat-card.active {
+            border-color: #a855f7;
+            background: rgba(168,85,247,0.08);
+        }
+        .cat-card input {
+            accent-color: #a855f7;
+            width: 18px;
+            height: 18px;
         }
 
         .upload-area {
@@ -117,24 +126,20 @@
             cursor: pointer;
             transition: all 0.2s ease;
         }
-
         .upload-area:hover {
             border-color: #a855f7;
             background: #1a1a1a;
             transform: translateY(-2px);
         }
-
         .upload-area.dragover {
             border-color: #3b82f6;
             background: #1e1e2a;
         }
-
         .upload-icon {
             font-size: 3rem;
             color: #a855f7;
             margin-bottom: 1rem;
         }
-
         .file-info {
             background: #1e1e1e;
             border-radius: 1rem;
@@ -143,14 +148,12 @@
             display: none;
             border-left: 4px solid #a855f7;
         }
-
         .file-info.show {
             display: flex;
             align-items: center;
             gap: 12px;
             animation: fadeInUp 0.3s ease;
         }
-
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -166,12 +169,10 @@
             width: 100%;
             transition: transform 0.2s, box-shadow 0.2s;
         }
-
         .btn-process:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px -5px rgba(168,85,247,0.4);
         }
-
         .btn-process:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -184,10 +185,7 @@
             text-align: center;
             display: none;
         }
-
-        .processing-status.show {
-            display: block;
-        }
+        .processing-status.show { display: block; }
 
         .spinner-custom {
             width: 48px;
@@ -198,7 +196,6 @@
             animation: spin 1s linear infinite;
             margin: 0 auto 1rem;
         }
-
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .progress-custom {
@@ -208,14 +205,12 @@
             overflow: hidden;
             margin: 1.5rem 0;
         }
-
         .progress-bar-custom {
             height: 100%;
             background: linear-gradient(90deg, #a855f7, #3b82f6);
             width: 0%;
             transition: width 0.3s;
         }
-
         .status-message {
             color: #9ca3af;
             font-size: 0.9rem;
@@ -231,25 +226,6 @@
             color: #f87171;
         }
 
-        .example-badge {
-            background: #1e1e1e;
-            color: #c084fc;
-            padding: 0.3rem 0.9rem;
-            border-radius: 2rem;
-            font-size: 0.8rem;
-            display: inline-block;
-            margin: 0.3rem;
-            cursor: pointer;
-            transition: 0.2s;
-            border: 1px solid #2c2c2c;
-        }
-
-        .example-badge:hover {
-            background: #2c2c2c;
-            color: white;
-            border-color: #a855f7;
-        }
-
         .feature-list {
             display: flex;
             justify-content: space-between;
@@ -258,18 +234,15 @@
             padding-top: 1.5rem;
             border-top: 1px solid #2c2c2c;
         }
-
         .feature-item {
             text-align: center;
             flex: 1;
         }
-
         .feature-item i {
             font-size: 1.8rem;
             color: #a855f7;
             margin-bottom: 0.5rem;
         }
-
         .feature-item p {
             font-size: 0.8rem;
             color: #9ca3af;
@@ -285,10 +258,19 @@
 <body>
 
 <nav class="navbar">
-    <div class="container-fluid d-flex justify-content-center">
-        <a class="navbar-brand text-white" href="/">
+    <div class="container-fluid d-flex justify-content-center position-relative">
+        <a class="navbar-brand text-white text-decoration-none" href="/">
             <i class="fas fa-magic me-2" style="color: #a855f7;"></i> Hylight<span class="gradient-text">X</span>
         </a>
+        {% if current_user.is_authenticated %}
+        <a href="/logout" class="btn btn-outline-light position-absolute end-0 me-3" style="border-radius: 2rem; border-color: rgba(255,255,255,0.2); font-weight: 600; font-size: 0.9rem; padding: 0.5rem 1.2rem; transition: all 0.2s;">
+            <i class="fas fa-sign-out-alt me-1"></i> Logout
+        </a>
+        {% else %}
+        <a href="/login" class="btn btn-outline-light position-absolute end-0 me-3" style="border-radius: 2rem; border-color: rgba(255,255,255,0.2); font-weight: 600; font-size: 0.9rem; padding: 0.5rem 1.2rem; transition: all 0.2s;">
+            <i class="fas fa-user me-1"></i> Login
+        </a>
+        {% endif %}
     </div>
 </nav>
 
@@ -296,7 +278,7 @@
     <div class="hero-card">
         <div class="card-header">
             <h1>AI Video Highlight <span class="gradient-text">Maker</span></h1>
-            <p>Describe what you want – we’ll extract the best moments automatically</p>
+            <p>Select categories first. Add an optional text note only if you want finer control.</p>
         </div>
 
         <div class="card-body">
@@ -307,16 +289,25 @@
             <div id="uploadForm">
                 <div class="form-group mb-4">
                     <label class="form-label">
-                        <i class="fas fa-comment-dots"></i> What highlights are you looking for?
+                        <i class="fas fa-layer-group"></i> Select highlight categories
                     </label>
-                    <textarea id="prompt" class="form-control" rows="3" 
-                        placeholder="e.g., Show me all intense fight scenes, dramatic goals, or emotional reactions..."></textarea>
-                    <div class="example-prompts mt-2">
-                        <span class="example-badge" onclick="setExamplePrompt('Show me all fight sequences and intense combat')">⚔️ Combat</span>
-                        <span class="example-badge" onclick="setExamplePrompt('Show me goals and celebrations')">⚽ Goals</span>
-                        <span class="example-badge" onclick="setExamplePrompt('Show me emotional moments and close-ups')">😢 Emotions</span>
-                        <span class="example-badge" onclick="setExamplePrompt('Show me fast action and movement')">🏃 Action</span>
+
+                    <div class="category-grid">
+                        {% for category in categories %}
+                        <label class="cat-card" data-category-card>
+                            <input type="checkbox" class="cat-checkbox" value="{{ category }}">
+                            <span>{{ category_labels[category] }}</span>
+                        </label>
+                        {% endfor %}
                     </div>
+                </div>
+
+                <div class="form-group mb-4">
+                    <label class="form-label">
+                        <i class="fas fa-comment-dots"></i> Optional note
+                    </label>
+                    <textarea id="optionalPrompt" class="form-control" rows="3"
+                        placeholder="e.g. sniper kills only, last-player clutch, healing after fight"></textarea>
                 </div>
 
                 <div class="form-group mb-4">
@@ -351,9 +342,9 @@
             </div>
 
             <div class="feature-list">
-                <div class="feature-item"><i class="fas fa-brain"></i><p>AI‑powered analysis</p></div>
-                <div class="feature-item"><i class="fas fa-cut"></i><p>Smart trimming</p></div>
-                <div class="feature-item"><i class="fas fa-film"></i><p>Smooth transitions</p></div>
+                <div class="feature-item"><i class="fas fa-brain"></i><p>Structured AI scoring</p></div>
+                <div class="feature-item"><i class="fas fa-crosshairs"></i><p>Category-based matching</p></div>
+                <div class="feature-item"><i class="fas fa-film"></i><p>Smooth highlight video</p></div>
                 <div class="feature-item"><i class="fas fa-download"></i><p>Instant download</p></div>
             </div>
         </div>
@@ -375,6 +366,17 @@
     const progressBar = document.getElementById('progressBar');
     const statusMsgSpan = document.getElementById('statusMessage');
 
+    function updateCategoryCardStyles() {
+        document.querySelectorAll('[data-category-card]').forEach(card => {
+            const checkbox = card.querySelector('.cat-checkbox');
+            card.classList.toggle('active', checkbox.checked);
+        });
+    }
+
+    document.querySelectorAll('.cat-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateCategoryCardStyles);
+    });
+
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
@@ -385,11 +387,10 @@
     });
     fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
 
-    function setExamplePrompt(p) { document.getElementById('prompt').value = p; }
-
     function handleFile(file) {
         if (!file.type.startsWith('video/')) { showError('Please select a valid video file'); return; }
         if (file.size > 500 * 1024 * 1024) { showError('File size must be < 500MB'); return; }
+
         selectedFile = file;
         fileNameSpan.textContent = file.name;
         fileSizeSpan.textContent = `(${(file.size / (1024*1024)).toFixed(2)} MB)`;
@@ -399,14 +400,25 @@
         hideError();
     }
 
+    function getSelectedCategories() {
+        return Array.from(document.querySelectorAll('.cat-checkbox:checked')).map(cb => cb.value);
+    }
+
     async function processVideo() {
         if (!selectedFile) { showError('Select a video first'); return; }
-        const prompt = document.getElementById('prompt').value.trim();
-        if (!prompt) { showError('Please describe what highlights you want'); return; }
+
+        const selectedCategories = getSelectedCategories();
+        if (!selectedCategories.length) {
+            showError('Please select at least one highlight category');
+            return;
+        }
+
+        const optionalPrompt = document.getElementById('optionalPrompt').value.trim();
 
         const formData = new FormData();
         formData.append('video', selectedFile);
-        formData.append('prompt', prompt);
+        formData.append('selected_categories', JSON.stringify(selectedCategories));
+        formData.append('optional_prompt', optionalPrompt);
 
         uploadFormDiv.style.display = 'none';
         processingDiv.classList.add('show');
@@ -416,8 +428,10 @@
         try {
             const response = await fetch('/upload', { method: 'POST', body: formData });
             const data = await response.json();
+
             if (response.ok) {
-                localStorage.setItem(`prompt_${data.job_id}`, prompt);
+                localStorage.setItem(`categories_${data.job_id}`, JSON.stringify(selectedCategories));
+                localStorage.setItem(`optional_prompt_${data.job_id}`, optionalPrompt);
                 progressBar.style.width = '30%';
                 statusMsgSpan.innerHTML = '<i class="fas fa-cogs"></i> Processing started...';
                 setTimeout(() => { window.location.href = `/result/${data.job_id}`; }, 1000);
@@ -430,8 +444,16 @@
         }
     }
 
-    function showError(msg) { errorMsgSpan.textContent = msg; errorAlert.classList.add('show'); setTimeout(() => errorAlert.classList.remove('show'), 5000); }
-    function hideError() { errorAlert.classList.remove('show'); }
+    function showError(msg) {
+        errorMsgSpan.textContent = msg;
+        errorAlert.classList.add('show');
+        setTimeout(() => errorAlert.classList.remove('show'), 5000);
+    }
+
+    function hideError() {
+        errorAlert.classList.remove('show');
+    }
+
     function resetForm() {
         uploadFormDiv.style.display = 'block';
         processingDiv.classList.remove('show');
@@ -441,6 +463,7 @@
         processBtn.disabled = true;
         progressBar.style.width = '0%';
     }
+
     const urlError = new URLSearchParams(window.location.search).get('error');
     if (urlError) showError(decodeURIComponent(urlError));
 </script>

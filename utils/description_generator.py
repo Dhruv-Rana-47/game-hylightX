@@ -45,15 +45,15 @@ class DescriptionGenerator:
     def _write_json(self, file_path, data):
         temp_path = f"{file_path}.tmp"
         with open(temp_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+            json.dump(data, f, indent=2, ensure_ascii=False)
         os.replace(temp_path, file_path)
 
     def _load_memory_context(self, memory_file):
         memory_data = self._safe_read_json(memory_file, {
             "clips": [],
-            "cumulative_summary": ""
+            "video_summary": ""
         })
-        return memory_data.get("cumulative_summary", "").strip(), memory_data
+        return memory_data.get("video_summary", "").strip(), memory_data
 
     def _append_descriptions(self, description_file, new_items):
         existing = self._safe_read_json(description_file, [])
@@ -73,19 +73,25 @@ class DescriptionGenerator:
         self._write_json(description_file, existing)
         return existing
 
+    def _build_video_summary(self, clips):
+        summaries = [clip.get("clip_summary", "").strip() for clip in clips if clip.get("clip_summary", "").strip()]
+        if not summaries:
+            return ""
+        joined = " | ".join(summaries[-8:])
+        return joined[:1400]
+
     def _append_memory(self, memory_file, clip_memory_entry):
         memory_data = self._safe_read_json(memory_file, {
             "clips": [],
-            "cumulative_summary": ""
+            "video_summary": ""
         })
 
         existing_clip_ids = {item.get("clip_id") for item in memory_data.get("clips", [])}
-
         if clip_memory_entry["clip_id"] not in existing_clip_ids:
             memory_data["clips"].append(clip_memory_entry)
 
         memory_data["clips"].sort(key=lambda x: x.get("clip_index", 0))
-        memory_data["cumulative_summary"] = clip_memory_entry.get("cumulative_summary", memory_data.get("cumulative_summary", ""))
+        memory_data["video_summary"] = self._build_video_summary(memory_data["clips"])
 
         self._write_json(memory_file, memory_data)
         return memory_data
@@ -103,48 +109,45 @@ class DescriptionGenerator:
         frame_manifest = "\n".join(frame_lines)
 
         if not memory_context:
-            memory_context = "No previous memory available. This may be the beginning of the video."
+            memory_context = "No previous video summary available."
+
+        categories_list = ", ".join(Config.GAMING_CATEGORIES)
+        signal_keys = ", ".join(Config.SIGNAL_KEYS)
+        moment_types = ", ".join(Config.MOMENT_TYPES)
 
         prompt = f"""
-You are analyzing selected key frames from one clip of a competitive shooter gameplay video, such as Valorant.
+You are analyzing selected key frames from one clip of a competitive gaming video.
+**CRITICAL CONTEXT**: This is Valorant gameplay. Look carefully for kill feed updates in the top right, kill banners/skulls at the bottom center, or crosshair hit markers.
 
-Primary goal:
-Generate frame descriptions that help downstream retrieval identify highlight-worthy moments such as fights, kills, clutch plays, enemy encounters, and intense action sequences.
+Goal:
+For every input frame, return a concise gameplay description plus structured category scores and structured visual signals.
 
-Strict instructions:
+Important instructions:
 - The frames are in chronological order.
-- Use previous memory only as continuity context.
+- Use previous video summary only as continuity context.
 - Do not hallucinate details not visible in the frames.
 - Return valid JSON only.
-- Provide one output description for every input frame.
-- The number of output frame_descriptions must exactly match the number of input frames.
-- Use the exact frame filename and exact clip_id provided in the input.
-- Focus on visible gameplay action, engagement level, and highlight potential.
-- If a kill or elimination is not clearly visible, describe it as a likely combat or engagement moment rather than stating it as fact.
-- If a frame is low action, say so.
+- Provide exactly one analysis object for every input frame.
+- Use the exact input frame filename and exact clip_id.
+- Category scores must be numbers between 0.0 and 1.0.
+- Signals must be booleans only.
+- Keep text concise and retrieval-friendly.
+- If a kill is not clearly visible, do not mark it as certain; use lower score.
+- If action is unclear, keep scores conservative.
 
-Pay special attention to these visual signals:
-- enemy visible on screen
-- crosshair aligned toward an opponent
-- firing or muzzle flash
-- damage/combat effects
-- explosion, smoke, flash, or ability effect
-- sudden aggressive movement
-- close-range encounter
-- multi-enemy pressure
-- tense angle holding
-- objective pressure
-- visually intense or decisive moment
-- aftermath of a fight
+Categories:
+{categories_list}
 
-For each frame description:
-- state what is visibly happening
-- mention the action intensity: low, moderate, or high if visually inferable
-- mention whether the frame appears to be setup, engagement, peak-action, or post-fight
-- mention visible combat cues and highlight relevance
-- avoid generic phrases unless the frame truly has little information
+Signals:
+{signal_keys}
 
-Previous cumulative memory:
+Allowed action levels:
+low, moderate, high
+
+Allowed moment types:
+{moment_types}
+
+Previous video summary:
 {memory_context}
 
 Current clip metadata:
@@ -156,19 +159,39 @@ clip_end_time: {clip_info['end_time']}
 Ordered selected frames:
 {frame_manifest}
 
-Return JSON in this exact structure:
+Return JSON in exactly this structure:
 {{
-  "frame_descriptions": [
+  "frame_analyses": [
     {{
       "frame": "exact filename",
       "clip_id": "exact clip id",
       "clip_timestamp": 0.0,
       "video_timestamp": 0.0,
-      "description": "gameplay-focused description emphasizing visible action, combat cues, and highlight intensity"
+      "description": "concise gameplay description",
+      "scores": {{
+        "kill": 0.0,
+        "combat": 0.0,
+        "clutch": 0.0,
+        "healing": 0.0,
+        "camping": 0.0,
+        "rush": 0.0,
+        "objective": 0.0,
+        "ability": 0.0
+      }},
+      "signals": {{
+        "enemy_visible": false,
+        "firing_visible": false,
+        "damage_effect_visible": false,
+        "healing_visible": false,
+        "crosshair_on_enemy": false,
+        "objective_visible": false,
+        "ability_visible": false
+      }},
+      "moment_type": "setup",
+      "action_level": "low"
     }}
   ],
-  "clip_summary": "short summary of the clip including action buildup, engagement, and highlight-worthy progression if present",
-  "cumulative_summary": "updated running summary of the gameplay so far, including combat flow and major action continuity if visible"
+  "clip_summary": "one concise sentence summarizing the clip"
 }}
 """
         return prompt
@@ -186,19 +209,40 @@ Return JSON in this exact structure:
 
         return text.strip()
 
+    def _safe_score(self, value):
+        try:
+            score = float(value)
+            if score < 0:
+                return 0.0
+            if score > 1:
+                return 1.0
+            return round(score, 3)
+        except Exception:
+            return 0.0
+
+    def _safe_bool(self, value):
+        return bool(value)
+
+    def _safe_action_level(self, value):
+        value = (value or "").strip().lower()
+        if value in Config.ACTION_LEVEL_MAP:
+            return value
+        return "low"
+
+    def _safe_moment_type(self, value):
+        value = (value or "").strip().lower()
+        if value in Config.MOMENT_TYPES:
+            return value
+        return "transition"
+
     def describe_frames_batch(self, clip_info, selected_frames, memory_context):
-        """
-        One model request per clip.
-        """
         if not selected_frames:
             return {
-                "frame_descriptions": [],
-                "clip_summary": "",
-                "cumulative_summary": memory_context or ""
+                "frame_analyses": [],
+                "clip_summary": ""
             }
 
         prompt = self._build_batch_prompt(clip_info, selected_frames, memory_context)
-
         contents = [prompt]
 
         for frame in selected_frames:
@@ -233,39 +277,57 @@ Return JSON in this exact structure:
 
                     raw_text = response.text.strip()
                     clean_text = self._clean_json_response(raw_text)
-                    print(f"📦 Raw model response for {clip_info['clip_id']}:\n{clean_text}\n")
-                    
                     parsed = json.loads(clean_text)
-
                     return parsed
 
                 except Exception as e:
                     print(f"⚠️ Error with {model_id}: {e}")
+                    last_error = e
                     if self.is_rate_limit_error(e):
-                        last_error = e
                         continue
-                    else:
-                        last_error = e
-                        continue
+                    continue
 
             self.current_model_index = 0
 
         raise Exception(f"❌ All models and API keys failed for batch description: {last_error}")
-    
-    def process_clip_batch(self, clip_info, selected_frames, description_file, memory_file):
-        print("🔥 NEW process_clip_batch loaded")
-        """
-        End-to-end processing for one clip:
-        - load prior memory
-        - batch describe selected frames
-        - append description.json
-        - append memory.json
 
-        Robust version:
-        - tries exact filename matching first
-        - falls back to index-based mapping if model filenames are not exact
-        - never crashes just because mapping is weak
-        """
+    def _aggregate_clip_scores(self, normalized_items):
+        category_max_scores = {cat: 0.0 for cat in Config.GAMING_CATEGORIES}
+        category_mean_scores = {cat: 0.0 for cat in Config.GAMING_CATEGORIES}
+        peak_timestamps = {cat: None for cat in Config.GAMING_CATEGORIES}
+        signal_counts = {sig: 0 for sig in Config.SIGNAL_KEYS}
+        peak_action_level = "low"
+
+        if not normalized_items:
+            return category_max_scores, category_mean_scores, peak_timestamps, signal_counts, peak_action_level
+
+        for item in normalized_items:
+            scores = item.get("scores", {})
+            signals = item.get("signals", {})
+
+            for cat in Config.GAMING_CATEGORIES:
+                score = self._safe_score(scores.get(cat, 0.0))
+                category_mean_scores[cat] += score
+                if score >= category_max_scores[cat]:
+                    category_max_scores[cat] = score
+                    peak_timestamps[cat] = item["timestamp"]
+
+            for sig in Config.SIGNAL_KEYS:
+                if self._safe_bool(signals.get(sig, False)):
+                    signal_counts[sig] += 1
+
+            if Config.ACTION_LEVEL_MAP.get(item.get("action_level", "low"), 1) > Config.ACTION_LEVEL_MAP.get(peak_action_level, 1):
+                peak_action_level = item.get("action_level", "low")
+
+        total = len(normalized_items)
+        for cat in Config.GAMING_CATEGORIES:
+            category_mean_scores[cat] = round(category_mean_scores[cat] / total, 3)
+
+        category_max_scores = {k: round(v, 3) for k, v in category_max_scores.items()}
+
+        return category_max_scores, category_mean_scores, peak_timestamps, signal_counts, peak_action_level
+
+    def process_clip_batch(self, clip_info, selected_frames, description_file, memory_file):
         memory_context, _ = self._load_memory_context(memory_file)
 
         batch_result = self.describe_frames_batch(
@@ -274,26 +336,22 @@ Return JSON in this exact structure:
             memory_context=memory_context
         )
 
-        frame_descriptions = batch_result.get("frame_descriptions", [])
+        frame_analyses = batch_result.get("frame_analyses", [])
         clip_summary = (batch_result.get("clip_summary") or "").strip()
-        cumulative_summary = (batch_result.get("cumulative_summary") or "").strip()
-
-        print(f"📌 {clip_info['clip_id']} returned {len(frame_descriptions)} frame_descriptions")
 
         selected_by_name = {frame["frame"]: frame for frame in selected_frames}
         normalized_items = []
 
-        # PASS 1: exact filename matching
-        for item in frame_descriptions:
+        # Exact filename mapping
+        for item in frame_analyses:
             frame_name = (item.get("frame") or "").strip()
             selected_meta = selected_by_name.get(frame_name)
-
             if not selected_meta:
                 continue
 
             description_text = (item.get("description") or "").strip()
-            if not description_text:
-                continue
+            scores = item.get("scores", {})
+            signals = item.get("signals", {})
 
             normalized_items.append({
                 "frame": selected_meta["frame"],
@@ -303,28 +361,26 @@ Return JSON in this exact structure:
                 "clip_timestamp": selected_meta["clip_timestamp"],
                 "timestamp": selected_meta["video_timestamp"],
                 "video_timestamp": selected_meta["video_timestamp"],
-                "description": description_text
+                "description": description_text if description_text else "Gameplay frame with unclear details.",
+                "scores": {cat: self._safe_score(scores.get(cat, 0.0)) for cat in Config.GAMING_CATEGORIES},
+                "signals": {sig: self._safe_bool(signals.get(sig, False)) for sig in Config.SIGNAL_KEYS},
+                "moment_type": self._safe_moment_type(item.get("moment_type")),
+                "action_level": self._safe_action_level(item.get("action_level"))
             })
 
-        # PASS 2: fallback to order-based mapping
+        # Order fallback
         if not normalized_items:
-            print(f"⚠️ Exact frame-name matching failed for {clip_info['clip_id']}. Using order-based fallback.")
-
             usable_items = []
-            for item in frame_descriptions:
-                description_text = (item.get("description") or "").strip()
-                if description_text:
-                    usable_items.append(item)
+            for item in frame_analyses:
+                usable_items.append(item)
 
             pair_count = min(len(selected_frames), len(usable_items))
 
             for i in range(pair_count):
                 selected_meta = selected_frames[i]
                 item = usable_items[i]
-                description_text = (item.get("description") or "").strip()
-
-                if not description_text:
-                    continue
+                scores = item.get("scores", {})
+                signals = item.get("signals", {})
 
                 normalized_items.append({
                     "frame": selected_meta["frame"],
@@ -334,13 +390,15 @@ Return JSON in this exact structure:
                     "clip_timestamp": selected_meta["clip_timestamp"],
                     "timestamp": selected_meta["video_timestamp"],
                     "video_timestamp": selected_meta["video_timestamp"],
-                    "description": description_text
+                    "description": (item.get("description") or "Gameplay frame with unclear details.").strip(),
+                    "scores": {cat: self._safe_score(scores.get(cat, 0.0)) for cat in Config.GAMING_CATEGORIES},
+                    "signals": {sig: self._safe_bool(signals.get(sig, False)) for sig in Config.SIGNAL_KEYS},
+                    "moment_type": self._safe_moment_type(item.get("moment_type")),
+                    "action_level": self._safe_action_level(item.get("action_level"))
                 })
 
-        # PASS 3: safe placeholder fallback
+        # Safe placeholder fallback
         if not normalized_items:
-            print(f"⚠️ No usable structured mapping for {clip_info['clip_id']}. Creating placeholder descriptions.")
-
             for selected_meta in selected_frames:
                 normalized_items.append({
                     "frame": selected_meta["frame"],
@@ -350,12 +408,16 @@ Return JSON in this exact structure:
                     "clip_timestamp": selected_meta["clip_timestamp"],
                     "timestamp": selected_meta["video_timestamp"],
                     "video_timestamp": selected_meta["video_timestamp"],
-                    "description": "Gameplay frame selected from this clip, but the model did not return a usable structured frame description."
+                    "description": "Gameplay frame with unclear details.",
+                    "scores": {cat: 0.0 for cat in Config.GAMING_CATEGORIES},
+                    "signals": {sig: False for sig in Config.SIGNAL_KEYS},
+                    "moment_type": "transition",
+                    "action_level": "low"
                 })
 
-        print(f"✅ {clip_info['clip_id']} normalized_items count = {len(normalized_items)}")
-
         updated_descriptions = self._append_descriptions(description_file, normalized_items)
+
+        category_max_scores, category_mean_scores, peak_timestamps, signal_counts, peak_action_level = self._aggregate_clip_scores(normalized_items)
 
         memory_entry = {
             "clip_id": clip_info["clip_id"],
@@ -363,8 +425,12 @@ Return JSON in this exact structure:
             "start_time": clip_info["start_time"],
             "end_time": clip_info["end_time"],
             "selected_frames_count": len(selected_frames),
-            "clip_summary": clip_summary if clip_summary else "Clip processed but summary was weak or missing.",
-            "cumulative_summary": cumulative_summary if cumulative_summary else memory_context
+            "clip_summary": clip_summary if clip_summary else "Gameplay clip processed.",
+            "category_max_scores": category_max_scores,
+            "category_mean_scores": category_mean_scores,
+            "peak_timestamps": peak_timestamps,
+            "signal_counts": signal_counts,
+            "peak_action_level": peak_action_level
         }
 
         updated_memory = self._append_memory(memory_file, memory_entry)
@@ -372,9 +438,8 @@ Return JSON in this exact structure:
         time.sleep(self.request_delay)
 
         return {
-            "frame_descriptions": normalized_items,
+            "frame_analyses": normalized_items,
             "clip_summary": clip_summary,
-            "cumulative_summary": cumulative_summary,
             "updated_descriptions": updated_descriptions,
             "updated_memory": updated_memory
         }
