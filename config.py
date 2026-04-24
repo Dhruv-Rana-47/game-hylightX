@@ -26,7 +26,7 @@ class Config:
     MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB
 
     # Clip settings
-    CLIP_DURATION = 5  # seconds
+    CLIP_DURATION = 10  # seconds
 
     # Frame extraction
     HIGH_FPS = 5
@@ -39,8 +39,8 @@ class Config:
     KEEP_FIRST_FRAME = True
     KEEP_LAST_FRAME = True
     PRE_CHANGE_FRAMES = 1
-    MIN_SELECTED_PER_CLIP = 5
-    MAX_SELECTED_PER_CLIP = 7
+    MIN_SELECTED_PER_CLIP = 3
+    MAX_SELECTED_PER_CLIP = 10
 
     # API settings
     API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -48,7 +48,6 @@ class Config:
         os.getenv("GOOGLE_API_KEY_2")
     ]
 
-    # Vision models for description stage
     MODELS = [
         "gemma-3-27b-it",
         "gemma-3-12b-it",
@@ -63,7 +62,7 @@ class Config:
     MATCHER_MAX_RETRIES = 3
     MATCHER_RETRY_WAIT_SECONDS = 35
 
-    REQUEST_DELAY = 2.5  # seconds
+    REQUEST_DELAY = 4.2  # seconds
 
     # Video processing
     PRE_CONTEXT = 2

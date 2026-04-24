@@ -11,3 +11,5 @@ python-dotenv
 Flask-SQLAlchemy
 Flask-Login
 Werkzeug
+Authlib
+requests

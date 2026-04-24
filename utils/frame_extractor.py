@@ -91,6 +91,12 @@ class FrameExtractor:
                     )
                     frame_path = os.path.join(clip_frames_folder, filename)
 
+                    height, width = frame.shape[:2]
+                    if height > 720:
+                        scale = 720 / height
+                        new_width = int(width * scale)
+                        frame = cv2.resize(frame, (new_width, 720))
+
                     success = cv2.imwrite(frame_path, frame)
                     if not success:
                         print(f"⚠️ Failed to save frame: {frame_path}")

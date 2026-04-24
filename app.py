@@ -9,6 +9,7 @@ from config import Config
 from extensions import db, login_manager
 from models import User
 from flask_login import login_user, logout_user, login_required, current_user
+from authlib.integrations.flask_client import OAuth
 from utils.cleanup import CleanupManager
 from utils.video_segmenter import VideoSegmenter
 from utils.frame_extractor import FrameExtractor
@@ -22,6 +23,8 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 db.init_app(app)
+with app.app_context():
+    db.create_all()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message_category = "error"
@@ -29,6 +32,22 @@ login_manager.login_message_category = "error"
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile',
+        'claims_options': {
+            'iss': {
+                'values': ['https://accounts.google.com', 'accounts.google.com']
+            }
+        }
+    }
+)
 
 cleanup_manager = CleanupManager()
 video_segmenter = VideoSegmenter(clip_duration=Config.CLIP_DURATION)
@@ -236,6 +255,37 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
+@app.route('/login/google')
+def login_google():
+    redirect_uri = url_for('authorize_google', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/login/google/authorize')
+def authorize_google():
+    token = google.authorize_access_token()
+    
+    # Try getting userinfo from token first (OIDC), fall back to API call
+    user_info = token.get('userinfo')
+    if not user_info:
+        resp = google.get('https://www.googleapis.com/oauth2/v3/userinfo', token=token)
+        user_info = resp.json()
+
+    if not user_info or not user_info.get('email'):
+        flash("Google login failed: could not retrieve user info.", "error")
+        return redirect(url_for('login'))
+
+    email = user_info.get('email')
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        # Create new user if they don't exist
+        user = User(email=email)
+        db.session.add(user)
+        db.session.commit()
+
+    login_user(user)
+    return redirect(url_for('index'))
 
 
 @app.route("/result/<job_id>")
